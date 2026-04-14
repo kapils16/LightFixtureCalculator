@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room Lighting Calculator — Lumen Method</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:           #0f1117;
+    --surface:      #181c26;
+    --surface2:     #1e2330;
+    --border:       #2a3040;
+    --text:         #e8ecf2;
+    --muted:        #6b7a94;
+    --accent:       #f97316;
+    --accent-dim:   #7c3a0e;
+    --accent-glow:  rgba(249,115,22,0.18);
+    --green:        #22c55e;
+    --green-dim:    #14532d;
+    --amber:        #f59e0b;
+    --amber-dim:    #78350f;
+    --red:          #ef4444;
+    --red-dim:      #7f1d1d;
+    --radius:       7px;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.45;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 16px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  /* ===== THREE-PANEL LAYOUT ===== */
+  .app {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ===== PANELS ===== */
+  .panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    padding: 8px 12px 6px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ===== CANVAS PANEL (centre) ===== */
+  .canvas-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #0b0e14;
+  }
+
+  .canvas-panel .panel-title {
+    background: var(--surface);
+  }
+
+  #svg-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 10px;
+  }
+
+  #room-svg {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  /* ===== INPUT FIELDS ===== */
+  .section-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin: 10px 0 5px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--accent-dim);
+  }
+
+  .section-label:first-child { margin-top: 2px; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 7px;
+  }
+
+  .field label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .field label .val {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 0.75rem;
+  }
+
+  .field input[type="number"],
+  .field select {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color 0.12s;
+    width: 100%;
+  }
+
+  .field input[type="number"]:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #12151f;
+  }
+
+  .field select option { background: #1e2330; }
+
+  .field input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+    margin-top: 3px;
+    height: 16px;
+  }
+
+  .range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  /* ===== RESULT METRICS ===== */
+  .metric {
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    margin-bottom: 6px;
+  }
+
+  .metric.neutral { border-color: var(--border); }
+  .metric.good    { border-color: var(--green-dim);  background: #0d2318; }
+  .metric.warn    { border-color: var(--amber-dim);  background: #1c1400; }
+  .metric.bad     { border-color: var(--red-dim);    background: #1a0909; }
+
+  .metric .m-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .metric .m-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .metric.good .m-value { color: var(--green); }
+  .metric.warn .m-value { color: var(--amber); }
+  .metric.bad  .m-value { color: var(--red); }
+
+  .metric .m-sub {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .metrics-grid .metric { margin-bottom: 0; }
+  .metric-full { grid-column: 1 / -1; }
+
+  /* ===== BANNER ===== */
+  .banner {
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    display: none;
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+
+  .banner.show { display: block; }
+  .banner.warn { background: var(--amber-dim); border: 1px solid var(--amber); color: #fcd34d; }
+  .banner.bad  { background: var(--red-dim);   border: 1px solid var(--red);   color: #fca5a5; }
+
+  /* ===== FORMULA BOX ===== */
+  .formula-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    line-height: 1.75;
+    margin-top: 8px;
+  }
+
+  .formula-box strong { color: var(--text); }
+
+  code {
+    background: #0b0e14;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: 'Fira Mono', 'Courier New', monospace;
+    font-size: 0.82em;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Room Lighting Calculator</h1><br>
+  <p>Lumen Method &mdash; Number of Fixtures &amp; Grid Layout</p>
+</header>
+
+<div class="app">
+
+  <!-- ===== LEFT: INPUTS ===== -->
+  <div class="panel">
+    <div class="panel-title">Inputs</div>
+    <div class="panel-body">
+
+      <div class="section-label">Room Geometry</div>
+      <div class="row2">
+        <div class="field">
+          <label>Length (m)</label>
+          <input type="number" id="length" value="6.0" min="1" max="100" step="0.1">
+        </div>
+        <div class="field">
+          <label>Width (m)</label>
+          <input type="number" id="width" value="4.0" min="1" max="100" step="0.1">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Ceiling Ht (m)</label>
+          <input type="number" id="ceiling" value="3.0" min="2" max="20" step="0.1">
+        </div>
+        <div class="field">
+          <label>Work Plane (m)</label>
+          <input type="number" id="workplane" value="0.85" min="0" max="2" step="0.05">
+        </div>
+      </div>
+      <div class="field">
+        <label>Pendant Drop (m) <span class="val" style="font-size:0.65rem;color:var(--muted)">0=flush</span></label>
+        <input type="number" id="suspension" value="0.0" min="0" max="5" step="0.1">
+      </div>
+
+      <div class="section-label">Illuminance</div>
+      <div class="field">
+        <label>Space Preset</label>
+        <select id="preset">
+          <option value="">— select preset —</option>
+          <option value="750">Workshop / Technical (750)</option>
+          <option value="500" selected>Office / Classroom (500)</option>
+          <option value="300">Kitchen / Commercial (300)</option>
+          <option value="200">Retail General (200)</option>
+          <option value="150">Living / Corridor (150)</option>
+          <option value="100">Storage / Stair (100)</option>
+          <option value="50">Ambient / Bedroom (50)</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Required E (lux)</label>
+        <input type="number" id="illuminance" value="500" min="10" max="5000" step="10">
+      </div>
+
+      <div class="section-label">Luminaire</div>
+      <div class="field">
+        <label>Flux per Fixture Φ (lm)</label>
+        <input type="number" id="flux" value="3000" min="100" max="100000" step="100">
+      </div>
+
+      <div class="section-label">Reflectances</div>
+      <div class="row2">
+        <div class="field">
+          <label>Ceiling (%)</label>
+          <input type="number" id="rceil" value="70" min="0" max="90" step="5">
+        </div>
+        <div class="field">
+          <label>Wall (%)</label>
+          <input type="number" id="rwall" value="50" min="0" max="90" step="5">
+        </div>
+      </div>
+      <div class="field">
+        <label>Floor (%)</label>
+        <input type="number" id="rfloor" value="20" min="0" max="70" step="5">
+      </div>
+
+      <div class="section-label">Maintenance</div>
+      <div class="field">
+        <label>MaintenanceFactor<span class="val" id="mf-display">0.80</span></label>
+        <input type="range" id="mf" min="0.5" max="1.0" step="0.01" value="0.80">
+        <div class="range-labels"><span>0.50 dirty</span><span>0.80 typical</span><span>1.00 new</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== CENTRE: CANVAS ===== -->
+  <div class="canvas-panel">
+    <div class="panel-title">Schematic Plan</div>
+    <div id="svg-wrapper">
+      <svg id="room-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+
+  <!-- ===== RIGHT: RESULTS ===== -->
+  <div class="panel">
+    <div class="panel-title">Results</div>
+    <div class="panel-body">
+
+      <div id="banner-err" class="banner bad">
+        ✕ Invalid input — check room dimensions and mounting height.
+      </div>
+      <div id="banner-shr" class="banner warn">
+        ⚠ S/Hm &gt; 1.5 — poor uniformity likely. Add fixtures or use wider-beam luminaires.
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric neutral" id="m-ri">
+          <div class="m-label">Room Index</div>
+          <div class="m-value" id="v-ri">—</div>
+          <div class="m-sub">RI</div>
+        </div>
+        <div class="metric neutral" id="m-uf">
+          <div class="m-label">Utilisation Factor</div>
+          <div class="m-value" id="v-uf">—</div>
+          <div class="m-sub">UF</div>
+        </div>
+        <div class="metric neutral" id="m-hm">
+          <div class="m-label">Mount Height</div>
+          <div class="m-value" id="v-hm">—</div>
+          <div class="m-sub">Hm above WP</div>
+        </div>
+        <div class="metric neutral" id="m-shr">
+          <div class="m-label">S / Hm</div>
+          <div class="m-value" id="v-shr">—</div>
+          <div class="m-sub">≤ 1.5 good</div>
+        </div>
+        <div class="metric neutral metric-full" id="m-n">
+          <div class="m-label">Fixtures Required (N)</div>
+          <div class="m-value" id="v-n">—</div>
+          <div class="m-sub" id="s-n">exact calculated</div>
+        </div>
+        <div class="metric neutral metric-full" id="m-grid">
+          <div class="m-label">Grid Layout</div>
+          <div class="m-value" id="v-grid">—</div>
+          <div class="m-sub" id="s-grid">rows × cols</div>
+        </div>
+        <div class="metric neutral metric-full" id="m-actual">
+          <div class="m-label">Achieved Illuminance</div>
+          <div class="m-value" id="v-actual">—</div>
+          <div class="m-sub" id="s-actual">lux after rounding</div>
+        </div>
+        <div class="metric neutral" id="m-sx">
+          <div class="m-label">Spacing X</div>
+          <div class="m-value" id="v-sx">—</div>
+          <div class="m-sub" id="s-sx">cols</div>
+        </div>
+        <div class="metric neutral" id="m-sy">
+          <div class="m-label">Spacing Y</div>
+          <div class="m-value" id="v-sy">—</div>
+          <div class="m-sub" id="s-sy">rows</div>
+        </div>
+      </div>
+
+      <div class="formula-box">
+        <div style="font-size: 0.85rem; font-weight: 900;">Reference Formulae</div>
+        <strong>N = (E × A) / (Φ × UF × MF)</strong><br>
+        <strong>RI = (L × W) / (Hm × (L + W))</strong><br>
+        <strong>Hm</strong> = Ceil − WP − Pendant<br>
+        <strong>Sx</strong> = L ÷ cols &nbsp;|&nbsp; <strong>Sy</strong> = W ÷ rows<br>
+        Border = Sx/2 &amp; Sy/2 from walls<br><br>
+        UF from CIBSE table (RI + reflectances, linear interpolation).<br>
+        S/Hm ≤ 1.5 for acceptable uniformity.
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- .app -->
+
+<script>
+// ============================================================
+//  Utilisation Factor Table (CIBSE simplified)
+// ============================================================
+const RI_BANDS = [0.6, 0.8, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0];
+
+const UF_TABLE = {
+  "HHH": [0.47, 0.54, 0.59, 0.64, 0.68, 0.73, 0.76, 0.78, 0.81, 0.83],
+  "HMM": [0.41, 0.47, 0.52, 0.57, 0.61, 0.66, 0.69, 0.72, 0.75, 0.77],
+  "MMM": [0.36, 0.42, 0.47, 0.52, 0.55, 0.60, 0.63, 0.66, 0.69, 0.71],
+  "LMM": [0.30, 0.36, 0.41, 0.45, 0.49, 0.54, 0.57, 0.59, 0.63, 0.65],
+  "LLL": [0.22, 0.27, 0.31, 0.35, 0.38, 0.43, 0.46, 0.48, 0.52, 0.54],
+};
+
+function classifyReflectance(v) { return v >= 60 ? 'H' : v >= 35 ? 'M' : 'L'; }
+
+function getUFKey(rc, rw, rf) {
+  const key = classifyReflectance(rc) + classifyReflectance(rw) + classifyReflectance(rf);
+  if (UF_TABLE[key]) return key;
+  const sc = { H:2, M:1, L:0 };
+  const score = sc[key[0]]*4 + sc[key[1]]*2 + sc[key[2]];
+  return Object.keys(UF_TABLE).reduce((b, k) => {
+    const s = sc[k[0]]*4 + sc[k[1]]*2 + sc[k[2]];
+    return Math.abs(s-score) < Math.abs(sc[b[0]]*4+sc[b[1]]*2+sc[b[2]]-score) ? k : b;
+  });
+}
+
+function interpolateUF(ufv, ri) {
+  const n = RI_BANDS.length;
+  if (ri <= RI_BANDS[0]) return ufv[0];
+  if (ri >= RI_BANDS[n-1]) return ufv[n-1];
+  for (let i = 0; i < n-1; i++) {
+    if (ri >= RI_BANDS[i] && ri <= RI_BANDS[i+1]) {
+      const t = (ri - RI_BANDS[i]) / (RI_BANDS[i+1] - RI_BANDS[i]);
+      return ufv[i] + t * (ufv[i+1] - ufv[i]);
+    }
+  }
+  return ufv[n-1];
+}
+
+function getUF(ri, rc, rw, rf) {
+  return interpolateUF(UF_TABLE[getUFKey(rc, rw, rf)], ri);
+}
+
+// ============================================================
+//  Grid finder
+// ============================================================
+function bestGrid(N, L, W) {
+  if (N <= 0) return { rows:1, cols:1 };
+  let best = null, bestScore = Infinity;
+  for (let cols = 1; cols <= 20; cols++) {
+    for (let rows = 1; rows <= 20; rows++) {
+      const total = rows * cols;
+      if (total < N) continue;
+      const waste = total - N;
+      const balancePenalty = Math.abs((rows/cols) - (W/L)) * 2;
+      const score = waste*3 + balancePenalty + total*0.01;
+      if (score < bestScore) { bestScore = score; best = { rows, cols }; }
+    }
+  }
+  return best || { rows:1, cols:Math.ceil(N) };
+}
+
+// ============================================================
+//  Main calculation
+// ============================================================
+function calculate() {
+  const L    = parseFloat(document.getElementById('length').value);
+  const W    = parseFloat(document.getElementById('width').value);
+  const H    = parseFloat(document.getElementById('ceiling').value);
+  const wp   = parseFloat(document.getElementById('workplane').value);
+  const susp = parseFloat(document.getElementById('suspension').value);
+  const E    = parseFloat(document.getElementById('illuminance').value);
+  const phi  = parseFloat(document.getElementById('flux').value);
+  const rc   = parseFloat(document.getElementById('rceil').value);
+  const rw   = parseFloat(document.getElementById('rwall').value);
+  const rf   = parseFloat(document.getElementById('rfloor').value);
+  const mf   = parseFloat(document.getElementById('mf').value);
+
+  const Hm = H - wp - susp;
+  if (isNaN(L)||isNaN(W)||isNaN(H)||isNaN(E)||isNaN(phi)||Hm<=0.3||L<=0||W<=0) {
+    showError(true); return;
+  }
+  showError(false);
+
+  const A       = L * W;
+  const RI      = (L * W) / (Hm * (L + W));
+  const UF      = getUF(RI, rc, rw, rf);
+  const N_exact = (E * A) / (phi * UF * mf);
+  const N       = Math.ceil(N_exact);
+  const { rows, cols } = bestGrid(N, L, W);
+  const total   = rows * cols;
+  const Sx      = L / cols;
+  const Sy      = W / rows;
+  const SHR     = Math.max(Sx, Sy) / Hm;
+  const E_act   = (total * phi * UF * mf) / A;
+
+  setM('ri',     RI.toFixed(2),           null,                          'neutral');
+  setM('uf',     UF.toFixed(3),           null,                          'neutral');
+  setM('hm',     Hm.toFixed(2) + ' m',   null,                          'neutral');
+  setM('shr',    SHR.toFixed(2),          'max(Sx,Sy) / Hm',             SHR<=1.3?'good':SHR<=1.5?'warn':'bad');
+  setM('n',      N.toString(),            N_exact.toFixed(1) + ' exact', N===total?'good':'neutral');
+  setM('grid',   rows + ' × ' + cols,     total + ' fixtures total',     'good');
+  const eClass = E_act>=E*0.95?'good':E_act>=E*0.85?'warn':'bad';
+  setM('actual', Math.round(E_act)+' lx', 'target: '+E+' lx',           eClass);
+  setM('sx',     Sx.toFixed(2)+' m',      'border: '+(Sx/2).toFixed(2)+' m', 'neutral');
+  setM('sy',     Sy.toFixed(2)+' m',      'border: '+(Sy/2).toFixed(2)+' m', 'neutral');
+
+  document.getElementById('banner-shr').classList.toggle('show', SHR > 1.5);
+
+  drawGrid(L, W, rows, cols, Sx, Sy, Hm);
+}
+
+function setM(id, value, sub, cls) {
+  const el = document.getElementById('m-' + id);
+  el.className = 'metric ' + cls + (el.classList.contains('metric-full') ? ' metric-full' : '');
+  document.getElementById('v-' + id).textContent = value;
+  const subEl = el.querySelector('.m-sub');
+  if (sub !== null && subEl) subEl.textContent = sub;
+}
+
+function showError(show) {
+  document.getElementById('banner-err').classList.toggle('show', show);
+}
+
+// ============================================================
+//  SVG Room Plan with full dimension annotations
+// ============================================================
+function drawGrid(L, W, rows, cols, Sx, Sy, Hm) {
+  const svgEl   = document.getElementById('room-svg');
+  const wrapper = document.getElementById('svg-wrapper');
+  const cw      = wrapper.clientWidth  || 600;
+  const ch      = wrapper.clientHeight || 450;
+
+  // Reserve space for dimension annotations on all sides
+  const PAD_L = 60, PAD_R = 60, PAD_T = 60, PAD_B = 60;
+  const drawW = cw - PAD_L - PAD_R;
+  const drawH = ch - PAD_T - PAD_B;
+
+  const scale = Math.min(drawW / L, drawH / W);
+  const rw    = L * scale;
+  const rh    = W * scale;
+  const ox    = PAD_L + (drawW - rw) / 2;
+  const oy    = PAD_T + (drawH - rh) / 2;
+
+  const toX = x => ox + x * scale;
+  const toY = y => oy + y * scale;
+
+  // Fixture symbol radius
+  const fr = Math.min(scale * Math.min(Sx, Sy) * 0.20, 14, rw/(cols*2.5), rh/(rows*2.5));
+
+  // Colours (dark theme)
+  const C = {
+    roomFill:    '#111827',
+    roomStroke:  '#f97316',
+    gridLine:    'rgba(249,115,22,0.12)',
+    dimLine:     '#4b5563',
+    dimText:     '#9ca3af',
+    dimAccent:   '#f97316',
+    fixGlow:     'rgba(249,115,22,0.20)',
+    fixFill:     '#f97316',
+    fixRing:     '#ea580c',
+    fixCore:     '#431407',
+    borderDim:   '#22c55e',
+    spacingDim:  '#60a5fa',
+    wallHatch:   '#1f2937',
+  };
+
+  let h = `<defs>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="${C.wallHatch}" stroke-width="3"/>
+    </pattern>
+  </defs>`;
+
+  // Wall hatch border (thick wall feel)
+  const wt = 6;
+  h += `<rect x="${ox-wt}" y="${oy-wt}" width="${rw+wt*2}" height="${rh+wt*2}" fill="url(#hatch)" rx="2"/>`;
+
+  // Room fill
+  h += `<rect x="${ox}" y="${oy}" width="${rw}" height="${rh}" fill="${C.roomFill}" stroke="${C.roomStroke}" stroke-width="1.5"/>`;
+
+  // Bay grid lines (dashed)
+  for (let c = 0; c < cols; c++) {
+    const x = toX((c + 0.5) * Sx);
+    h += `<line x1="${x}" y1="${oy}" x2="${x}" y2="${oy+rh}" stroke="${C.gridLine}" stroke-width="0.8" stroke-dasharray="4,4"/>`;
+  }
+  for (let r = 0; r < rows; r++) {
+    const y = toY((r + 0.5) * Sy);
+    h += `<line x1="${ox}" y1="${y}" x2="${ox+rw}" y2="${y}" stroke="${C.gridLine}" stroke-width="0.8" stroke-dasharray="4,4"/>`;
+  }
+
+  // ---- DIMENSION ANNOTATIONS ----
+
+  // 1. Overall room length (top, outside room)
+  h += dimH(ox, ox+rw, oy - wt - 22, L.toFixed(1)+' m', C.dimAccent, C.dimAccent, 11, true);
+
+  // 2. Overall room width (left, outside room)
+  h += dimV(ox - wt - 36, oy, oy+rh, W.toFixed(1)+' m', C.dimAccent, C.dimAccent, 11, true);
+
+  // 3. Spacing Sx between fixtures (bottom, between first two col centres) — only if cols > 1 or still show 1 bay
+  if (cols >= 1) {
+    const y_dim = oy + rh + wt + 18;
+    // Show one Sx span between col 0 and col 1 centres (or wall to first if cols==1)
+    const x0 = toX(Sx * 0.5);
+    const x1 = cols > 1 ? toX(Sx * 1.5) : toX(Sx * 0.5);
+    if (cols > 1) {
+      h += dimH(x0, x1, y_dim, 'Sx='+Sx.toFixed(2)+'m', C.spacingDim, C.spacingDim, 9.5, false);
+    }
+    // Border Sx/2: wall to first fixture (bottom)
+    const bx = toX(Sx * 0.5);
+    h += dimH(ox, bx, y_dim + (cols>1 ? 16 : 0), (Sx/2).toFixed(2)+'m', C.borderDim, C.borderDim, 9, false);
+  }
+
+  // 4. Spacing Sy between fixtures (right side)
+  if (rows >= 1) {
+    const x_dim = ox + rw + wt + 18;
+    const y0 = toY(Sy * 0.5);
+    const y1 = rows > 1 ? toY(Sy * 1.5) : toY(Sy * 0.5);
+    if (rows > 1) {
+      h += dimV(x_dim, y0, y1, 'Sy='+Sy.toFixed(2)+'m', C.spacingDim, C.spacingDim, 9.5, false);
+    }
+    // Border Sy/2
+    const by = toY(Sy * 0.5);
+    h += dimV(x_dim + (rows>1 ? 16 : 0), oy, by, (Sy/2).toFixed(2)+'m', C.borderDim, C.borderDim, 9, false);
+  }
+
+  // ---- FIXTURES ----
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const fx = toX((c + 0.5) * Sx);
+      const fy = toY((r + 0.5) * Sy);
+      // Glow
+      h += `<circle cx="${fx}" cy="${fy}" r="${fr*2.2}" fill="${C.fixGlow}"/>`;
+      // Outer ring
+      h += `<circle cx="${fx}" cy="${fy}" r="${fr}" fill="${C.fixFill}" stroke="${C.fixRing}" stroke-width="1.2"/>`;
+      // Inner core
+      h += `<circle cx="${fx}" cy="${fy}" r="${fr*0.35}" fill="${C.fixCore}"/>`;
+      // Cross hair
+      h += `<line x1="${fx-fr*0.6}" y1="${fy}" x2="${fx+fr*0.6}" y2="${fy}" stroke="${C.fixCore}" stroke-width="0.8"/>`;
+      h += `<line x1="${fx}" y1="${fy-fr*0.6}" x2="${fx}" y2="${fy+fr*0.6}" stroke="${C.fixCore}" stroke-width="0.8"/>`;
+    }
+  }
+
+  // ---- LEGEND (bottom-left of room) ----
+  const lx = ox + rw - 200, ly = oy + rh + 12;
+  h += `<circle cx="${lx}" cy="${ly}" r="4" fill="${C.fixFill}" stroke="${C.fixRing}" stroke-width="1"/>`;
+  h += `<text x="${lx+8}" y="${ly+4}" font-size="9.5" fill="${C.dimText}">Luminaire (${rows*cols} total)</text>`;
+  // Colour key
+  h += `<line x1="${lx+100}" y1="${ly}" x2="${lx+110}" y2="${ly}" stroke="${C.spacingDim}" stroke-width="1.5"/>`;
+  h += `<text x="${lx+113}" y="${ly+4}" font-size="9" fill="${C.spacingDim}">Spacing</text>`;
+  h += `<line x1="${lx+155}" y1="${ly}" x2="${lx+165}" y2="${ly}" stroke="${C.borderDim}" stroke-width="1.5"/>`;
+  h += `<text x="${lx+168}" y="${ly+4}" font-size="9" fill="${C.borderDim}">Border</text>`;
+
+  svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
+  svgEl.innerHTML = h;
+}
+
+// ---- Dimension helpers ----
+// Horizontal dim line
+function dimH(x1, x2, y, label, lineCol, textCol, fs, bold) {
+  const mx = (x1 + x2) / 2;
+  const fw = bold ? '700' : '500';
+  return `
+    <line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${lineCol}" stroke-width="1"/>
+    <line x1="${x1}" y1="${y-4}" x2="${x1}" y2="${y+4}" stroke="${lineCol}" stroke-width="1"/>
+    <line x1="${x2}" y1="${y-4}" x2="${x2}" y2="${y+4}" stroke="${lineCol}" stroke-width="1"/>
+    <text x="${mx}" y="${y-4}" text-anchor="middle" font-size="${fs}" fill="${textCol}" font-weight="${fw}">${label}</text>
+  `;
+}
+
+// Vertical dim line
+function dimV(x, y1, y2, label, lineCol, textCol, fs, bold) {
+  const my = (y1 + y2) / 2;
+  const fw = bold ? '700' : '500';
+  return `
+    <line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${lineCol}" stroke-width="1"/>
+    <line x1="${x-4}" y1="${y1}" x2="${x+4}" y2="${y1}" stroke="${lineCol}" stroke-width="1"/>
+    <line x1="${x-4}" y1="${y2}" x2="${x+4}" y2="${y2}" stroke="${lineCol}" stroke-width="1"/>
+    <text x="${x-5}" y="${my}" text-anchor="middle" font-size="${fs}" fill="${textCol}" font-weight="${fw}"
+          transform="rotate(-90,${x-5},${my})">${label}</text>
+  `;
+}
+
+// ============================================================
+//  Event wiring
+// ============================================================
+document.getElementById('preset').addEventListener('change', e => {
+  const v = e.target.value;
+  if (v && v !== 'custom') { document.getElementById('illuminance').value = v; calculate(); }
+});
+
+document.getElementById('mf').addEventListener('input', e => {
+  document.getElementById('mf-display').textContent = parseFloat(e.target.value).toFixed(2);
+  calculate();
+});
+
+['length','width','ceiling','workplane','suspension','illuminance','flux','rceil','rwall','rfloor'].forEach(id => {
+  document.getElementById(id).addEventListener('input', calculate);
+  document.getElementById(id).addEventListener('change', calculate);
+});
+
+// Redraw on resize
+window.addEventListener('resize', calculate);
+
+calculate();
+</script>
+</body>
+</html>
