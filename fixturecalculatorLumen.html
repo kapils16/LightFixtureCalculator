@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lumen|Room Lighting Calculator — Lumen Method</title>
+<title>Lighting Fixture Calculator | Lumen</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -238,6 +238,22 @@
     margin-bottom: 2px;
   }
 
+  .metric-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .metric-inner .m-text { flex: 1; min-width: 0; }
+
+  .metric .m-icon {
+    flex-shrink: 0;
+    opacity: 0.5;
+    display: flex;
+    align-items: center;
+  }
+
   .metric .m-value {
     font-size: 1.2rem;
     font-weight: 800;
@@ -308,7 +324,7 @@
 <body>
 
 <header>
-  <h1>Room Lighting Calculator</h1><br>
+  <h1>Lighting Fixture Calculator</h1><br>
   <p>Lumen Method &mdash; Number of Fixtures &amp; Grid Layout</p>
 </header>
 
@@ -439,19 +455,51 @@
           <div class="m-sub">≤ 1.5 good</div>
         </div>
         <div class="metric neutral metric-full" id="m-n">
-          <div class="m-label">Fixtures Required (N)</div>
-          <div class="m-value" id="v-n">—</div>
-          <div class="m-sub" id="s-n">exact calculated</div>
+          <div class="metric-inner">
+            <div class="m-text">
+              <div class="m-label">Fixtures Required (N)</div>
+              <div class="m-value" id="v-n">—</div>
+              <div class="m-sub" id="s-n">exact calculated</div>
+            </div>
+            <div class="m-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.66-1.48 5-3.66 6.28L15 17H9l-.34-1.72A7.001 7.001 0 0 1 12 2z"/>
+              </svg>
+            </div>
+          </div>
         </div>
         <div class="metric neutral metric-full" id="m-grid">
-          <div class="m-label">Grid Layout</div>
-          <div class="m-value" id="v-grid">—</div>
-          <div class="m-sub" id="s-grid">rows × cols</div>
+          <div class="metric-inner">
+            <div class="m-text">
+              <div class="m-label">Grid Layout</div>
+              <div class="m-value" id="v-grid">—</div>
+              <div class="m-sub" id="s-grid">rows × cols</div>
+            </div>
+            <div class="m-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </div>
+          </div>
         </div>
         <div class="metric neutral metric-full" id="m-actual">
-          <div class="m-label">Achieved Illuminance</div>
-          <div class="m-value" id="v-actual">—</div>
-          <div class="m-sub" id="s-actual">lux after rounding</div>
+          <div class="metric-inner">
+            <div class="m-text">
+              <div class="m-label">Achieved Illuminance</div>
+              <div class="m-value" id="v-actual">—</div>
+              <div class="m-sub" id="s-actual">lux after rounding</div>
+            </div>
+            <div class="m-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            
+            </div>
+          </div>
         </div>
         <div class="metric neutral" id="m-sx">
           <div class="m-label">Spacing X</div>
@@ -480,6 +528,10 @@
   </div>
 
 </div><!-- .app -->
+
+<footer style="flex-shrink:0;padding:3px 14px;background:var(--surface);border-top:1px solid var(--border);display:flex;justify-content:flex-end;align-items:center;">
+  <span style="font-size:0.6rem;color:var(--muted);letter-spacing:0.04em;">© Kapil Sinha</span>
+</footer>
 
 <script>
 // ============================================================
