@@ -84,7 +84,7 @@ header p {
   }
   
   header p {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
   }
 }
 
@@ -151,7 +151,7 @@ header p {
 }
 
 .panel-title {
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -233,7 +233,7 @@ header p {
 
 /* ===== INPUT FIELDS ===== */
 .section-label {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.09em;
