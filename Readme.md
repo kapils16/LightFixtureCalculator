@@ -1,4 +1,4 @@
-# Room Lighting Calculator (Lumen Method)
+# Lighting Fixture Calculator (Lumen Method)
 
 A high-precision, browser-based lighting design tool that calculates the required number of luminaires and generates an optimal grid layout using the **CIBSE Lumen Method**.
 
